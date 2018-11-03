@@ -1,4 +1,19 @@
-val data = spark.read.json("/Users/Marion/Desktop/data-students.json")
+/*import org.apache.spark
+import org.apache.spark.ml.classification.LogisticRegression
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.ml.feature.OneHotEncoderEstimator
+import org.apache.spark.ml.feature.StringIndexer
+import org.apache.spark.ml.feature.StringIndexerModel
+import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.sql.SparkSession
+
+val spark = SparkSession
+    .builder()
+    .appName("Spark SQL basic example")
+    .config("spark.some.config.option", "some-value")
+    .getOrCreate()
+
+val data = spark.read.json("/home/godefroi/Téléchargements/data-students-new.json")
 
 val labelAsInt = data.withColumn("label",$"label".cast("Int"))
 
@@ -27,4 +42,5 @@ val renameInterests = cleanSize.withColumn("interests", cleanInterests(col("inte
 val sizeToString = renameInterests.withColumn("size", concat_ws("x", $"size"))
 
 // cleanSize.coalesce(1).write.json("/Users/johan/Downloads/data-students-new1.json")
-sizeToString.coalesce(1).write.json("/Users/Marion/Desktop/data-students-new2")
+sizeToString.coalesce(1).write.json("/home/godefroi/Téléchargements/new2JSON.json")
+*/
