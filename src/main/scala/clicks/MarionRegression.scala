@@ -1,6 +1,6 @@
 def trainModel()  = {
-
-    import org.apache.spark.ml._
+	
+	import org.apache.spark.ml._
 	import org.apache.spark.ml.attribute._
 	import org.apache.spark.ml.feature._
 	import org.apache.spark.ml.classification._
