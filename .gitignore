@@ -1,4 +1,6 @@
 *.class
 *.log
-
+.idea
+project
+target
 metastore_db/
