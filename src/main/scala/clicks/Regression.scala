@@ -77,6 +77,10 @@ println("aalal")
 df2.printSchema
 df2.show(50, false )
 
+/**
+val df3 = vectorAssembler(df2, Array("appOrSiteIndexVec", "mediaIndexVec", "publisherIndexVec", "sizeIndexVec" ,"timestampIndexVec", "userIndexVec", "interestsIndexVec", "bidFloor"))
+df3.printSchema
+*//
 
 /**
 // Load training data
