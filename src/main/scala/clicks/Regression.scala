@@ -14,95 +14,60 @@ object ClickPrediction extends App {
         .config("spark.master", "local")
         .getOrCreate()
 
-    // String indexer
-    // Encodes a string column of labels to a column of label indices. The most frequent label gets index 0
+    val data = spark.read.json("/home/godefroi/Téléchargements/new2JSON.json")
 
-    def indexStringColumns(df : DataFrame, cols: Array[String]) : DataFrame ={
-      var newdf = df
 
-      for (col <- cols){
-        val si = new StringIndexer().setInputCol(col).setOutputCol(col +"Index")
-
-        val sm :  StringIndexerModel = si.fit(newdf)
-        val indexed =  sm.transform(newdf).drop(col)
+    def indexStringColumns(df : DataFrame, col: String) : DataFrame = {
+        var newdf = df
+        val si = new StringIndexer().setInputCol(col).setOutputCol(col + "Index")
+        val sm: StringIndexerModel = si.fit(newdf)
+        val indexed = sm.transform(newdf).drop(col)
         newdf = indexed
 
-      }
-      return newdf
+        return newdf
     }
+
 
 
     // One hot encoder estimator
     // Maps a column of label indices to a column of binary vectors, with at most a single one-value. That alows Logistic Regression to use categorical features
     def oneHot(df : DataFrame, cols: Array[String]) : DataFrame ={
 
-      var newdf = df
+        var newdf = df
 
-      for (col <- cols){
+        for (col <- cols){
 
-        val oh = new OneHotEncoderEstimator()
-          .setInputCols(Array(col))
-          .setOutputCols(Array(col + "Vec"))
-        val model = oh.fit(newdf)
-        val encoded = model.transform(newdf).drop(col)
-        newdf = encoded
+            val oh = new OneHotEncoderEstimator()
+                .setInputCols(Array(col))
+                .setOutputCols(Array(col + "Enc"))
+            val model = oh.fit(newdf)
+            val encoded = model.transform(newdf).drop(col)
+            newdf = encoded
 
-      }
-      return newdf
-
-    }
-
-    // Vector assembler
-    // Combines a given list of columns into a single vector column.
-    /**
-      def vectorAssembler(df : DataFrame, cols: Array[String]) : DataFrame ={
-
-      var newdf = df
-
-      val assembler = new VectorAssembler()
-          .setInputCols(cols)
-          .setOutputCols("features")
-
-      val output = assembler.transform(newdf)
-      newdf = output
-
-      }
-      return newdf
+        }
+        return newdf
 
     }
-    **/
 
+    val appOrSiteIndexer = indexStringColumns(data, "appOrSite")
+    val interestsIndexer = indexStringColumns(appOrSiteIndexer, "interests")
+    val mediaIndexer = indexStringColumns(interestsIndexer, "media")
+    val publisherIndexer = indexStringColumns(mediaIndexer, "publisher")
+    val sizeIndexer = indexStringColumns(publisherIndexer, "size")
+    val timestampIndexer = indexStringColumns(sizeIndexer, "timestamp")
+    val userIndexer = indexStringColumns(timestampIndexer, "user")
+    userIndexer.printSchema
 
+    val encoder =oneHot(userIndexer , Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
+    encoder.printSchema
 
-    val data = spark.read.json("/home/godefroi/Téléchargements/data-students-new.json")
-    data.show(50, false)
+    val assembler = new VectorAssembler().setInputCols(Array("bidFloor", "appOrSiteIndexEnc", "interestsIndexEnc", "mediaIndexEnc", "publisherIndexEnc", "sizeIndexEnc", "timestampIndexEnc", "userIndexEnc"))
+        .setOutputCol("features")
 
-/*    val df = indexStringColumns(data , Array("appOrSite", "media", "publisher", "size" ,"timestamp", "user", "interests"))
-
-    df.printSchema
-    val df2 =oneHot(df , Array("appOrSiteIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex", "interestsIndex"))
-    println("aalal")
-    df2.printSchema
-    df2.show(50, false )
-    */
-/**
-val df3 = vectorAssembler(df2, Array("appOrSiteIndexVec", "mediaIndexVec", "publisherIndexVec", "sizeIndexVec" ,"timestampIndexVec", "userIndexVec", "interestsIndexVec", "bidFloor"))
-df3.printSchema
-*/
-
-
-    /**
-    // Load training data
-    val lr = new LogisticRegression()
-      .setMaxIter(10)
-      .setRegParam(0.3)
-      .setElasticNetParam(0.8)**/
-
-    // Fit the model
-    //val lrModel = lr.fit(data)
-
-    // Print the coefficients and intercept for logistic regression
-    //println(s"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
+    val data3 = assembler.transform(encoder)
+    data3.printSchema()
+    data3.show(20)
+    data3.select("features").show(20, false)
 
     spark.close()
 }
