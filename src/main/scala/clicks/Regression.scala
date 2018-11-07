@@ -61,7 +61,8 @@ object ClickPrediction extends App {
     val encoder =oneHot(userIndexer , Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
     encoder.printSchema
 
-
+    val test = 0.25;
+    val training = 0.75;
     val splits = encoder.randomSplit(Array(training, test))
 	  val trainData = splits(0)
 	  val testData = splits(1)
