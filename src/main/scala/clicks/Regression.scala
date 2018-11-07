@@ -61,13 +61,25 @@ object ClickPrediction extends App {
     val encoder =oneHot(userIndexer , Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
     encoder.printSchema
 
+
+    val splits = encoder.randomSplit(Array(training, test))
+	  val trainData = splits(0)
+	  val testData = splits(1)
+
     val assembler = new VectorAssembler().setInputCols(Array("bidFloor", "appOrSiteIndexEnc", "interestsIndexEnc", "mediaIndexEnc", "publisherIndexEnc", "sizeIndexEnc", "timestampIndexEnc", "userIndexEnc"))
         .setOutputCol("features")
 
-    val data3 = assembler.transform(encoder)
-    data3.printSchema()
-    data3.show(20)
-    data3.select("features").show(20, false)
+    val OneHotTRAIN = assembler.transform(trainData)
+    val OneHotTEST = assembler.transform(testData)
+
+        // Train the model
+    val lr = new LogisticRegression().setLabelCol("label").setFeaturesCol("features").setMaxIter(10).setRegParam(0.3).setElasticNetParam(0.8)
+    val model = lr.fit(OneHotTRAIN)   
+    println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
+
+    // Test the model
+    val predictions = model.transform(OneHotTEST)
+    predictions.show
 
     spark.close()
 }
