@@ -58,7 +58,11 @@ object ClickPrediction extends App {
     val userIndexer = indexStringColumns(timestampIndexer, "user")
     userIndexer.printSchema
 
-    val encoder =oneHot(userIndexer , Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
+    val labelIndexer = new StringIndexer().setInputCol("label").setOutputCol("label")
+    val sm: StringIndexerModel = si.fit(userIndexer)
+    val labelIndexed = sm.transform(userIndexer)
+
+    val encoder =oneHot(labelIndexed, Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
     encoder.printSchema
 
     val test = 0.25;
