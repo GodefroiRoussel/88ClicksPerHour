@@ -10,6 +10,7 @@ object ClickPrediction extends App {
         .appName("Click prediction")
         .config("spark.master", "local")
         .getOrCreate()
+    spark.sparkContext.setLogLevel("ERROR")
 
     val data = spark.read.json("/home/godefroi/Téléchargements/new2JSON.json")
 
