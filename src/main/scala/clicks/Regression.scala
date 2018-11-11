@@ -47,47 +47,58 @@ object ClickPrediction extends App {
 
     }
 
-    val appOrSiteIndexer: DataFrame = indexStringColumns(data, "appOrSite")
+    val bidFloorIndexer: DataFrame = indexStringColumns(data, "bidFloor")
+    val appOrSiteIndexer: DataFrame = indexStringColumns(bidFloorIndexer, "appOrSite")
     val interestsIndexer: DataFrame = indexStringColumns(appOrSiteIndexer, "interests")
     val mediaIndexer: DataFrame = indexStringColumns(interestsIndexer, "media")
     val publisherIndexer: DataFrame = indexStringColumns(mediaIndexer, "publisher")
     val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
     val timestampIndexer: DataFrame = indexStringColumns(sizeIndexer, "timestamp")
     val userIndexer: DataFrame = indexStringColumns(timestampIndexer, "user")
-    userIndexer.printSchema
+    println("-----------------------------         USER INDEXER               ------------------------------------------------------")
+    userIndexer.printSchema()
+    userIndexer.show()
 
+/*
+    val encoder : DataFrame = oneHot(userIndexer, Array("bidFloorIndex", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
+    println(" -----------------------------          ENCODER               ------------------------------------------------------")
+    encoder.printSchema()
+    encoder.show()*/
 
-    val encoder : DataFrame = oneHot(userIndexer, Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
-    println("ENCODER")
-    encoder.printSchema
-
-    val test = 0.01;
-    val training = 0.99;
-    val splits : Array[DataFrame] = encoder.randomSplit(Array(training, test))
+    val test = 0.25
+    val training = 0.75
+    val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, test))
 	  val trainData : DataFrame = splits(0)
 	  val testData : DataFrame = splits(1)
 
-    println("TRAIN DATA")
-    trainData.printSchema()
-    println("TEST DATA SUMMARY "+testData.count)
 
-
-    val assembler: VectorAssembler = new VectorAssembler().setInputCols(Array("bidFloor", "appOrSiteIndexEnc", "interestsIndexEnc", "mediaIndexEnc", "publisherIndexEnc", "sizeIndexEnc", "timestampIndexEnc", "userIndexEnc"))
+    val assembler: VectorAssembler = new VectorAssembler()
+        .setInputCols(Array("bidFloorIndex", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex", "timestampIndex", "userIndex"))
         .setOutputCol("features")
 
     val OneHotTRAIN: DataFrame = assembler.transform(trainData)
-    val OneHotTEST: DataFrame = assembler.transform(testData)
+    OneHotTRAIN.printSchema()
 
+    val OneHotTEST: DataFrame = assembler.transform(testData)
+    OneHotTEST.printSchema()
         // Train the model
 
-    val lr: LogisticRegression = new LogisticRegression().setLabelCol("label").setFeaturesCol("features").setMaxIter(1).setRegParam(0.3).setElasticNetParam(0.8)
-    val model: LogisticRegressionModel = lr.fit(OneHotTEST)
+    val lr: LogisticRegression = new LogisticRegression()
+        .setLabelCol("label")
+        .setFeaturesCol("features")
+        .setPredictionCol("prediction")
+        .setMaxIter(10)
+        .setRegParam(0.3)
+        .setThreshold(0.5)
+        .setFamily("auto")
+
+    val model: LogisticRegressionModel = lr.fit(OneHotTRAIN)
     println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
 
-    /*
+
     // Test the model
-    val predictions = model.transform(OneHotTEST)
-    predictions.show*/
+    val predictions: DataFrame = model.transform(OneHotTEST)
+    predictions.show
 
     spark.close()
 }
