@@ -3,6 +3,7 @@ package clicks
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.functions.regexp_replace
+import org.apache.spark.sql.functions.{concat, lit}
 import org.apache.spark.sql.Column
 import org.apache.spark.sql._
 
@@ -62,7 +63,7 @@ object DataCleaner extends App {
   }
 
   def sizeToString(dataFrame: DataFrame): DataFrame={
-    dataFrame.withColumn("size", concat_ws("x", $"size"))
+    dataFrame.withColumn("size", concat("x", $"size"))
   }
 
   def newDf(dataFrame: DataFrame): DataFrame ={

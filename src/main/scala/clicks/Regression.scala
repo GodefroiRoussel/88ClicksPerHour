@@ -65,39 +65,59 @@ object ClickPrediction extends App {
   encoder.printSchema()
   encoder.show()
 
-  val test = 0.25
-  val training = 0.75
-  val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, test))
-  val trainData : DataFrame = splits(0)
-  val testData : DataFrame = splits(1)
-  
   val assembler: VectorAssembler = new VectorAssembler()
     .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex", "userIndex"))
     .setOutputCol("features")
 
-  val OneHotTRAIN: DataFrame = assembler.transform(trainData)
-  OneHotTRAIN.printSchema()
+  val test = 0.25
+  val training = 0.75
+  val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, test))
+  var trainData : DataFrame = splits(0)
+  var testData : DataFrame = splits(1)
 
-  val OneHotTEST: DataFrame = assembler.transform(testData)
-  OneHotTEST.printSchema()
+  var train: DataFrame = assembler.transform(trainData)
+  train.printSchema()
+
+  var test: DataFrame = assembler.transform(testData)
+  test.printSchema()
+
+  train = train.select("features", "label")
+  test = testData.select("features", "label")
+
+
   // Train the model
 
   val lr: LogisticRegression = new LogisticRegression()
     .setLabelCol("label")
     .setFeaturesCol("features")
-    .setPredictionCol("prediction")
+    .setRegParam(0.0)
+    .setElasticNetParam(0.0)
     .setMaxIter(10)
-    .setRegParam(0.3)
-    .setThreshold(0.5)
-    .setFamily("auto")
+    .setTol(1E-6)
+    .setFitIntercept(true)
 
-  val model: LogisticRegressionModel = lr.fit(OneHotTRAIN)
+  val model: LogisticRegressionModel = lr.fit(train)
   println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
 
 
   // Test the model
-  val predictions: DataFrame = model.transform(OneHotTEST)
+  val predictions: DataFrame = model.transform(test)
+  predictions.printSchema()
   predictions.show
+  predictions.select ("label", "prediction","rawPrediction").show()
+
+  /*val evaluator = new BinaryClassificationEvaluator()
+    .setMetricName("areaUnderROC")
+    .setRawPredictionCol("rawPrediction")
+    .setLabelCol("label")
+
+  val eval = evaluator.evaluate(prediction)
+  println("Test set areaunderROC/accuracy = " + eval)*/
+
+  // Exporte en csv
+  predictions.select("label", "prediction").write.format("csv").option("header","true").save("/Documents")
 
   spark.close()
 }
+
+
