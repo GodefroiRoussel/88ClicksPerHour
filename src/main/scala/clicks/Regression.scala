@@ -2,7 +2,6 @@ package clicks
 
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.feature._
-import org.apache.spark.implicits._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object ClickPrediction extends App {
@@ -13,7 +12,7 @@ object ClickPrediction extends App {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-  val df = spark.read.json("/home/godefroi/Téléchargements/new2JSON.json")
+    val df = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
 
   val data = DataCleaner.newDf(df)
 
@@ -27,62 +26,38 @@ object ClickPrediction extends App {
     return newdf
   }
 
-
-
-  // One hot encoder estimator
-  // Maps a column of label indices to a column of binary vectors, with at most a single one-value. That alows Logistic Regression to use categorical features
-  def oneHot(df : DataFrame, cols: Array[String]) : DataFrame ={
-
-    var newdf : DataFrame = df
-
-    for (col <- cols){
-
-      val oh : OneHotEncoderEstimator = new OneHotEncoderEstimator()
-        .setInputCols(Array(col))
-        .setOutputCols(Array(col + "Enc"))
-      val model : OneHotEncoderModel = oh.fit(newdf)
-      val encoded : DataFrame = model.transform(newdf).drop(col)
-      newdf = encoded
-
-    }
-    return newdf
-
-  }
-
   val appOrSiteIndexer: DataFrame = indexStringColumns(data, "appOrSite")
   val interestsIndexer: DataFrame = indexStringColumns(appOrSiteIndexer, "interests")
   val mediaIndexer: DataFrame = indexStringColumns(interestsIndexer, "media")
   val publisherIndexer: DataFrame = indexStringColumns(mediaIndexer, "publisher")
-  val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
-  val userIndexer: DataFrame = indexStringColumns(sizeIndexer, "user")
+  //val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
+  val userIndexer: DataFrame = indexStringColumns(publisherIndexer, "user")
 
   println("-----------------------------         USER INDEXER               ------------------------------------------------------")
   userIndexer.printSchema()
   userIndexer.show()
 
-  val encoder : DataFrame = oneHot(userIndexer, Array("appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" , "userIndex"))
-  println(" -----------------------------          ENCODER               ------------------------------------------------------")
-  encoder.printSchema()
-  encoder.show()
 
   val assembler: VectorAssembler = new VectorAssembler()
-    .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex", "userIndex"))
+    .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "userIndex"))
     .setOutputCol("features")
 
-  val test = 0.25
+  val testValue = 0.25
   val training = 0.75
-  val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, test))
+  val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, testValue))
   var trainData : DataFrame = splits(0)
   var testData : DataFrame = splits(1)
 
   var train: DataFrame = assembler.transform(trainData)
   train.printSchema()
+    train.show(20)
 
   var test: DataFrame = assembler.transform(testData)
   test.printSchema()
+    test.show(20)
 
   train = train.select("features", "label")
-  test = testData.select("features", "label")
+  test = test.select("features", "label")
 
 
   // Train the model
@@ -105,7 +80,8 @@ object ClickPrediction extends App {
   predictions.printSchema()
   predictions.show
   predictions.select ("label", "prediction","rawPrediction").show()
-
+predictions.select("prediction").distinct().show()
+    predictions.select("label").distinct().show()
   /*val evaluator = new BinaryClassificationEvaluator()
     .setMetricName("areaUnderROC")
     .setRawPredictionCol("rawPrediction")
@@ -115,7 +91,7 @@ object ClickPrediction extends App {
   println("Test set areaunderROC/accuracy = " + eval)*/
 
   // Exporte en csv
-  predictions.select("label", "prediction").write.format("csv").option("header","true").save("/Documents")
+  //predictions.select("label", "prediction").write.format("csv").option("header","true").save("/Documents")
 
   spark.close()
 }
