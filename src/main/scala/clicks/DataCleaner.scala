@@ -6,9 +6,9 @@ import org.apache.spark.sql.functions.regexp_replace
 import org.apache.spark.sql.functions.{concat, lit}
 import org.apache.spark.sql.Column
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions.{concat, lit}
 
-
-object DataCleaner extends App {
+object DataCleaner {
   val spark = SparkSession
     .builder()
     .appName("Click prediction")
@@ -16,7 +16,7 @@ object DataCleaner extends App {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-  val data = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
+  //val data = spark.read.json("/home/godefroi/Téléchargementsdata-students.json")
 
   def booleanToInt( bool :Boolean) = if(bool) 1 else 0
   val booleanToInt_column = udf(booleanToInt _)
@@ -40,17 +40,10 @@ object DataCleaner extends App {
 
 
   def cleanSize(dataFrame: DataFrame):DataFrame ={
-    dataFrame.filter("size is not NULL").select(
-      col("appOrSite"),
-      col("bidFloor"),
-      col("interests"),
-      col("label"),
-      col("media"),
-      col("publisher"),
-      col("size"),
-      col("user")
-    )
+      val columnNames = Seq("appOrSite", "bidFloor", "interests", "label", "media", "publisher", "user")
 
+      //val df1 : DataFrame = dataFrame.filter("size is not NULL")
+      dataFrame.select( columnNames.head, columnNames.tail: _*)
   }
 
   def cleanInterestsRegex(col: org.apache.spark.sql.Column): org.apache.spark.sql.Column = {
@@ -59,11 +52,15 @@ object DataCleaner extends App {
 
 
   def cleanInterests(dataFrame: DataFrame) : DataFrame={
-    dataFrame.withColumn("interests", cleanInterestsRegex(col("interests")))
+    dataFrame.withColumn("interests", cleanInterestsRegex(dataFrame("interests")))
   }
 
   def sizeToString(dataFrame: DataFrame): DataFrame={
-    dataFrame.withColumn("size", concat("x", $"size"))
+      val colSize: Column = dataFrame("size")
+      val test : String = colSize.toString()
+      println(test)
+    //dataFrame.withColumn("size", concat("x", "size"))
+      dataFrame
   }
 
   def newDf(dataFrame: DataFrame): DataFrame ={
@@ -71,9 +68,8 @@ object DataCleaner extends App {
     ndf = label(ndf)
     ndf = cleanBidFloor(ndf)
     ndf = cleanNullInterests(ndf)
-    ndf = cleanSize(ndf)
     ndf = cleanInterests(ndf)
-    ndf = sizeToString(ndf)
+      ndf = cleanSize(ndf)
     return ndf
   }
 
