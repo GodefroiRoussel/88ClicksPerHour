@@ -1,4 +1,4 @@
-import clicks.ClickPrediction._
+import clicks.ClickPrediction.{assembler, testData, trainData, _}
 import clicks.DataCleaner
 import org.apache.spark
 import org.apache.spark.ml.Pipeline
@@ -20,6 +20,10 @@ object test extends App {
 
     val data = DataCleaner.newDf(df)
 
+    println("-----------------------------         DATA CLEAN          ------------------------------------------------------")
+    data.printSchema()
+    data.show(20)
+
 
     def indexStringColumns(df : DataFrame, col: String) : DataFrame = {
         var newdf : DataFrame = df
@@ -30,82 +34,62 @@ object test extends App {
 
         return newdf
     }
-    // One hot encoder estimator
-    // Maps a column of label indices to a column of binary vectors, with at most a single one-value. That alows Logistic Regression to use categorical features
-    def oneHot(df : DataFrame, cols: Array[String]) : DataFrame ={
 
-        var newdf : DataFrame = df
+    val appOrSiteIndexer = new StringIndexer().setInputCol("appOrSite").setOutputCol("appOrSiteIndex")
+    val interestsIndexer = new StringIndexer().setInputCol("interests").setOutputCol("interestsIndex")
+    val mediaIndexer = new StringIndexer().setInputCol("media").setOutputCol("mediaIndex")
+    val publisherIndexer = new StringIndexer().setInputCol("publisher").setOutputCol("publisherIndex")
+    val userIndexer = new StringIndexer().setInputCol("user").setOutputCol("userIndex")
 
-        for (col <- cols){
-
-            val oh : OneHotEncoderEstimator = new OneHotEncoderEstimator()
-                .setInputCols(Array(col))
-                .setOutputCols(Array(col + "Enc"))
-            val model : OneHotEncoderModel = oh.fit(newdf)
-            val encoded : DataFrame = model.transform(newdf).drop(col)
-            newdf = encoded
-
-        }
-        return newdf
-
-    }
-
-    val bidFloorIndexer: DataFrame = indexStringColumns(data, "bidFloor")
-    val appOrSiteIndexer: DataFrame = indexStringColumns(bidFloorIndexer, "appOrSite")
+   /* val appOrSiteIndexer: DataFrame = indexStringColumns(data, "appOrSite")
     val interestsIndexer: DataFrame = indexStringColumns(appOrSiteIndexer, "interests")
     val mediaIndexer: DataFrame = indexStringColumns(interestsIndexer, "media")
     val publisherIndexer: DataFrame = indexStringColumns(mediaIndexer, "publisher")
-    //val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
-    //val timestampIndexer: DataFrame = indexStringColumns(sizeIndexer, "timestamp")
     val userIndexer: DataFrame = indexStringColumns(publisherIndexer, "user")
-    println("-----------------------------         USER INDEXER               ------------------------------------------------------")
+*/
+    /*println("-----------------------------         USER INDEXER               ------------------------------------------------------")
     userIndexer.printSchema()
     userIndexer.show()
+*/
 
-    /*
-        val encoder : DataFrame = oneHot(userIndexer, Array("bidFloorIndex", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "sizeIndex" ,"timestampIndex", "userIndex"))
-        println(" -----------------------------          ENCODER               ------------------------------------------------------")
-        encoder.printSchema()
-        encoder.show()*/
+    val assembler: VectorAssembler = new VectorAssembler()
+        .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "userIndex"))
+        .setOutputCol("features")
 
-    val test = 1
-    val training = 1
-    val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, test))
+    val testing = 0.2
+    val training = 0.8
+    val splits : Array[DataFrame] = data.randomSplit(Array(training, testing))
+
+
     val trainData : DataFrame = splits(0)
     val testData : DataFrame = splits(1)
 
-    val assembler: VectorAssembler = new VectorAssembler()
-        .setInputCols(Array("bidFloorIndex", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "userIndex"))
-        .setOutputCol("features")
 
-    val OneHotTRAIN: DataFrame = assembler.transform(trainData)
-    OneHotTRAIN.printSchema()
+    var train: DataFrame = assembler.transform(trainData)
 
-    val OneHotTEST: DataFrame = assembler.transform(testData)
-    OneHotTEST.printSchema()
-    // Train the model
+
+    var test: DataFrame = assembler.transform(testData)
+
 
     val lr: LogisticRegression = new LogisticRegression()
-        .setLabelCol("label")
+        /*.setLabelCol("label")
          .setFeaturesCol("features")
         .setPredictionCol("prediction")
         .setMaxIter(10)
-        .setRegParam(0.3)
-        .setThreshold(0.5)
-        .setFamily("auto")
-
-    val stages = Array(assembler, lr)
+        .setRegParam(0.01)
+*/
+    val stages = Array(appOrSiteIndexer, interestsIndexer, mediaIndexer, publisherIndexer, userIndexer, assembler, lr)
 
     val pipeline = new Pipeline().setStages(stages)
 
-   val model = pipeline.fit(trainData)
+   val model = pipeline.fit(train)
 
    //val model: LogisticRegressionModel = lr.fit(trainData)
    //println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
 
 
     // Test the model
-    val predictions: DataFrame = model.transform(testData)
+    val predictions: DataFrame = model.transform(test)
     predictions.show
 
     predictions.select ("label", "prediction","rawPrediction").show()
