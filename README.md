@@ -14,7 +14,7 @@ After dowloading the repository (`git clone https://github.com/JohanBrunet/88Cli
 cd 88ClicksPerHour
 ```
 
-:warning: Do not remove or modify the **model** folder
+:warning: Do not remove or modify the **model** folder!
 
 Run the `sbt compile` command to compile the project
 
@@ -33,3 +33,5 @@ The program will then run on its own using the data provided by the file you spe
 ## Results
 
 After the program is finished running you can find the results in the *.csv* file that is created inside the [predictions](predictions/) folder.
+
+:warning: Please delete the [predictions](predictions/) folder before each run.
