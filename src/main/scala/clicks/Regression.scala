@@ -14,7 +14,7 @@ object ClickPrediction extends App {
 
   //-------------------- MAIN ------------------------
 
-    println("Please enter the path to your JSON file you want to predict")
+    println("\nPlease enter the path to your JSON file you want to predict")
     val filePath: String = readLine().trim()
     clickPrediction(filePath, "./model")
 
@@ -154,6 +154,7 @@ object ClickPrediction extends App {
         .select("df1.appOrSite", "df1.bidFloor", "df1.city", "df1.exchange"
           , "df1.impid", "df1.interests", "df1.media", "df1.network", "df1.os"
           , "df1.publisher", "df1.size", "df1.timestamp", "df1.type", "df1.user", "df2.prediction")
+          val dfRename: DataFrame = df2.withColumn("Label", df2("prediction")).drop("prediction")
 
     // Transform the column size into a column of string to be able to write the dataframe into a csv file.
     val dfToExport: DataFrame = DataCleaner.castSize(df2)
