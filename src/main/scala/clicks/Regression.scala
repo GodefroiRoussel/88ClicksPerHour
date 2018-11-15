@@ -15,9 +15,11 @@ object ClickPrediction extends App {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-    val df = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
+    val df = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
 
   val data = DataCleaner.newDf(df)
+
+  print(data.select("prediction").distinct().show())
 
   def indexStringColumns(df : DataFrame, col: String) : DataFrame = {
     var newdf : DataFrame = df

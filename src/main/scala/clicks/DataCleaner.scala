@@ -18,7 +18,7 @@ object DataCleaner {
 
   //val data = spark.read.json("/home/godefroi/Téléchargementsdata-students.json")
 
-  def booleanToInt( bool :Boolean) = if(bool) 1 else 0
+  def booleanToInt( bool :Boolean) = if(bool) 1.0 else 0.0
   val booleanToInt_column = udf(booleanToInt _)
 
   /**
