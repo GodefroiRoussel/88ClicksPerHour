@@ -78,7 +78,7 @@ object ClickPrediction extends App {
     println(s"LogisticRegression: ${(lorModel :LogisticRegressionModel)}")
 
     // Print the coefficients and intercept from our logistic regression
-    println(s"Weights: ${lorModel.coefficients} Intercept: ${lorModel.intercept}")
+    println(s"Coefficients: ${lorModel.coefficients} Intercept: ${lorModel.intercept}")
 
     // We use an Evaluator to compute metrics that indicate how good our model is
     //BinaryClassificationEvaluator is use for binary classifications like our LogisticRegression
