@@ -1,14 +1,17 @@
 import clicks.DataCleaner
 import org.apache.spark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
-import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
+import org.apache.spark.ml.tuning.{CrossValidator , ParamGridBuilder }
+import org.apache.spark.ml.classification.{DecisionTreeClassifier}
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
+
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.ml.feature._
 import org.apache.spark.sql.SparkSession
+
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 
-object test extends App {
+object test2 extends App {
     val spark = SparkSession
         .builder()
         .appName("Click prediction")

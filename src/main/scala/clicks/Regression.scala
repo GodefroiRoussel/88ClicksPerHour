@@ -8,6 +8,7 @@ import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 
 object ClickPrediction extends App {
+
   val spark = SparkSession
     .builder()
     .appName("Click prediction")
@@ -15,21 +16,9 @@ object ClickPrediction extends App {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-    val df = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
+  val df = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
 
   val data = DataCleaner.newDf(df)
-
-  print(data.select("prediction").distinct().show())
-
-  def indexStringColumns(df : DataFrame, col: String) : DataFrame = {
-    var newdf : DataFrame = df
-    val si : StringIndexer = new StringIndexer().setInputCol(col).setOutputCol(col + "Index")
-    val sm: StringIndexerModel = si.fit(newdf)
-    val indexed : DataFrame = sm.transform(newdf).drop(col)
-    newdf = indexed
-
-    return newdf
-  }
 
 
   def indexStringColumns2(df : DataFrame, cols: Array[String]) : DataFrame ={
@@ -46,13 +35,6 @@ object ClickPrediction extends App {
     return newdf
   }
 
-  /*
-  val appOrSiteIndexer: DataFrame = indexStringColumns(data, "appOrSite")
-  val interestsIndexer: DataFrame = indexStringColumns(appOrSiteIndexer, "interests")
-  val mediaIndexer: DataFrame = indexStringColumns(interestsIndexer, "media")
-  val publisherIndexer: DataFrame = indexStringColumns(mediaIndexer, "publisher")
-  //val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
-  val userIndexer: DataFrame = indexStringColumns(publisherIndexer, "user")*/
   val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user"))
 
   println("-----------------------------         USER INDEXER               ------------------------------------------------------")
@@ -85,18 +67,13 @@ object ClickPrediction extends App {
     .setInputCols(Array("appOrSiteIndex", "interestsIndex","mediaIndex", "publisherIndex", "userIndex"))
     .setOutputCol("features")
 
-  val testValue = 0.25
-  val training = 0.75
+  val testValue = 0.2
+  val training = 0.8
   val splits : Array[DataFrame] = dfTest.randomSplit(Array(training, testValue))
   var trainData : DataFrame = splits(0)
   var testData : DataFrame = splits(1)
 
   //var train: DataFrame = assembler.transform(trainData)
-
-
-
-
-
 
   //var test: DataFrame = assembler.transform(testData)
 
@@ -112,15 +89,10 @@ object ClickPrediction extends App {
   // Train the model
 
   val lr: LogisticRegression = new LogisticRegression()
-      .setWeightCol("classWeightCol")
+    .setWeightCol("classWeightCol")
     .setLabelCol("label")
     .setFeaturesCol("features")
-    .setRegParam(0.8)
-    .setElasticNetParam(0.3)
     .setMaxIter(10)
-     // .setThreshold(0.962)
-    /*.setTol(1E-6)
-    .setFitIntercept(true)*/
 
   val stages = Array(assembler,lr)
 
@@ -133,20 +105,14 @@ object ClickPrediction extends App {
 
   // Test the model
   val predictions: DataFrame = model.transform(testData)
-  //predictions.select("bidFloor").distinct().show()
-  predictions.select("appOrSiteIndex").distinct().show()
-  predictions.select("interestsIndex").distinct().show()
-  predictions.select("mediaIndex").distinct().show()
-  predictions.select("publisherIndex").distinct().show()
-  predictions.select("userIndex").distinct().show()
 
 
-
-  predictions.printSchema()
-  predictions.show
-  predictions.select ("label", "prediction","rawPrediction").show()
+  /*predictions.printSchema()
+  predictions.show()
+  predictions.select ("label", "prediction","rawPrediction").show()*/
   predictions.select("prediction").distinct().show()
-    predictions.select("label").distinct().show()
+  predictions.select("label").distinct().show()
+
   val evaluator = new BinaryClassificationEvaluator()
     .setMetricName("areaUnderROC")
     .setRawPredictionCol("rawPrediction")
@@ -160,5 +126,3 @@ object ClickPrediction extends App {
 
   spark.close()
 }
-
-
