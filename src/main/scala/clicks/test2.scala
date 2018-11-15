@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import clicks.DataCleaner
 import org.apache.spark
 import org.apache.spark.ml.{Pipeline, PipelineModel}
@@ -58,3 +59,5 @@ object test2 extends App {
 
     spark.close()
 }
+=======
+>>>>>>> 5423a894e3e2ad5a0126e4248a53f495eef25829
