@@ -23,7 +23,7 @@ object ClickPrediction extends App {
     spark.sparkContext.setLogLevel("ERROR")
 
     // The json file
-    val df = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
+    val df = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
 
     // We clean the dataFrame with our dataCleaner program
     val data = DataCleaner.newDf(df, false)
@@ -80,7 +80,7 @@ object ClickPrediction extends App {
     //predictions.select("prediction").distinct().show()
 
 
-    // We use an Evaluator to compute metrucs that indicate how good our model is
+    // We use an Evaluator to compute metrics that indicate how good our model is
     //BinaryClassificationEvaluator is use for binary classifications like our LogisticRegression
     val evaluator = new BinaryClassificationEvaluator()
         .setMetricName("areaUnderROC")
@@ -119,7 +119,7 @@ object ClickPrediction extends App {
     println("J'ai bien chargé le model")
 
     // Export the result as CSV
-    predictions.select("label", "prediction").write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
+    model.transform(data).select("label", "prediction").write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
 
   }
 
