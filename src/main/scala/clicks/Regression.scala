@@ -11,8 +11,16 @@ import scala.io.StdIn.readLine
 
 object ClickPrediction extends App {
 
-    println("Please enter the path to your file")
-    val filePath = readLine().trim()
+
+  //-------------------- MAIN ------------------------
+
+    println("Please enter the path to your JSON file you want to predict")
+    val filePath: String = readLine().trim()
+    clickPrediction(filePath, "./modelSaved")
+
+
+
+  //----------------------- CREATION MODEL --------------------------
 
     /**
     * allows to create the classification model
@@ -20,7 +28,7 @@ object ClickPrediction extends App {
     */
   def creationModel(): Unit = {
 
-    val spark = SparkSession
+    val spark: SparkSession = SparkSession
         .builder()
         .appName("Click prediction")
         .config("spark.master", "local")
@@ -28,16 +36,18 @@ object ClickPrediction extends App {
     spark.sparkContext.setLogLevel("ERROR")
 
     // The json file
-    val df = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
+    val df: DataFrame = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
 
     // We clean the dataFrame with our dataCleaner program
-    val data = DataCleaner.newDf(df, false)
+    val data: DataFrame = DataCleaner.newDf(df, false)
+    println("Data Cleaned")
+    data.printSchema()
 
     // We index categorical values in order to do the logistic regression
     val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user", "size", "type"))
 
     // We create a dataSet with a new colum classWeightCol that contains the weight of the labels 
-    val dfBalanced = balanceDataset(userIndexer)
+    val dfBalanced: DataFrame = balanceDataset(userIndexer)
 
     // Transform the list of indexed columns into a single vector column.
     val assembler: VectorAssembler = new VectorAssembler()
@@ -45,8 +55,8 @@ object ClickPrediction extends App {
         .setOutputCol("features")
 
     // We split our new dataset in two, one dataSet to train our model and one to test it
-    val testValue = 0.2
-    val training = 0.8
+    val testValue: Double = 0.2
+    val training: Double = 0.8
     val splits: Array[DataFrame] = dfBalanced.randomSplit(Array(training, testValue))
     var trainData: DataFrame = splits(0)
     var testData: DataFrame = splits(1)
@@ -65,7 +75,7 @@ object ClickPrediction extends App {
     // An Estimator produces a Model from a DataFrame (Here, Logistic Regression)
     val stages = Array(assembler, lr)
 
-    // The DataFrame passes throught each stage and is transformed
+    // The DataFrame passes through each stage and is transformed
     val pipeline: Pipeline = new Pipeline().setStages(stages)
 
     // We train the model
@@ -78,7 +88,7 @@ object ClickPrediction extends App {
     val predictions: DataFrame = model.transform(testData)
 
     // We use the stage Estimator, LogisticRegression of the pipeline to print the coefficients
-    val lorModel = model.stages.last.asInstanceOf[LogisticRegressionModel]
+    val lorModel: LogisticRegressionModel = model.stages.last.asInstanceOf[LogisticRegressionModel]
     println(s"LogisticRegression: ${(lorModel :LogisticRegressionModel)}")
 
     // Print the coefficients and intercept from our logistic regression
@@ -86,17 +96,20 @@ object ClickPrediction extends App {
 
     // We use an Evaluator to compute metrics that indicate how good our model is
     //BinaryClassificationEvaluator is use for binary classifications like our LogisticRegression
-    val evaluator = new BinaryClassificationEvaluator()
+    val evaluator: BinaryClassificationEvaluator = new BinaryClassificationEvaluator()
         .setMetricName("areaUnderROC")
         .setRawPredictionCol("rawPrediction")
         .setLabelCol("label")
 
     // We evaluate and print out metrics, like our model accuracy
-    val eval = evaluator.evaluate(predictions)
+    val eval: Double = evaluator.evaluate(predictions)
     println("Test set areaunderROC/accuracy = " + eval)
 
     spark.close()
   }
+
+
+  //---------------------------------- CLICK PREDICTION -----------------------------------
 
     /**
     * applies our model to a file and predicts the number of clicks
@@ -104,9 +117,9 @@ object ClickPrediction extends App {
     * @param filePath path to the Json with the data
     * @param modelPath path to our model
     */
-  def batch(filePath: String, modelPath: String): Unit = {
+  def clickPrediction(filePath: String, modelPath: String): Unit = {
     // Creating spark session and read the data from the JSON of the user
-    val spark = SparkSession
+    val spark: SparkSession = SparkSession
         .builder()
         .appName("Click prediction")
         .config("spark.master", "local")
@@ -132,7 +145,7 @@ object ClickPrediction extends App {
 
     // We add ids to each row of these dataframes to be able to merge them together
     val newDf: DataFrame = initDf.withColumn("id1", monotonically_increasing_id())
-    val newPredictions = predictionsDf.withColumn("id2", monotonically_increasing_id())
+    val newPredictions: DataFrame = predictionsDf.withColumn("id2", monotonically_increasing_id())
 
     // Join the original dataframe with the prediction
     val df2: DataFrame = newDf.as("df1").join(newPredictions.as("df2")
@@ -145,24 +158,9 @@ object ClickPrediction extends App {
     // Transform the column size into a column of string to be able to write the dataframe into a csv file.
     val dfToExport: DataFrame = DataCleaner.castSize(df2)
 
-    // Export the result as CSV
-    dfToExport.write.format("csv").option("header", "true").save("./predictions/test.csv")
+    // Export the result as CSV in one file
+    dfToExport.coalesce(1).write.format("csv").option("header", "true").save("./predictions/prediction.csv")
   }
-
-  //-------------------- MAIN ------------------------
-  batch(filePath, "./modelSaved")
-  /*
-  main()
-
-  def main(): Unit ={
-    val mode: String = chooseMode()
-    mode match {
-      case "1" => creationModel()
-      case "2" => batch("", "")
-      case _ =>     println("Good Bye")
-        return
-    }
-  }*/
 
   // ------------------------- FUNCTIONS --------------------------
 
