@@ -1,6 +1,11 @@
+# Misc
 *.class
 *.log
 .idea
 project
 target
 metastore_db/
+.DS_Store
+
+# Folder containing generated CSV file
+predictions/
