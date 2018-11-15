@@ -101,6 +101,7 @@ object ClickPrediction extends App {
     * @param modelPath path to our model
     */
   def batch(filePath: String, modelPath: String): Unit = {
+    // Creating spark session and read the data from the JSON of the user
     val spark = SparkSession
         .builder()
         .appName("Click prediction")
@@ -110,19 +111,26 @@ object ClickPrediction extends App {
 
     val initDf: DataFrame = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
 
+    // We clean the dataFrame with our dataCleaner program
     val data: DataFrame = DataCleaner.newDf(initDf, true)
 
+    // We load our model
     val model: PipelineModel = PipelineModel.load(modelPath)
 
+    // We index categorical values in order to do the logistic regression according to our model
     val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "size", "type", "user"))
 
+    // We apply the model to our indexed data
     val predictions: DataFrame = model.transform(userIndexer)
 
+    // We create a dataframe with the prediction to be able later to add this column into another dataframes
     var predictionsDf: DataFrame = predictions.select("prediction")
 
+    // We add ids to each row of these dataframes to be able to merge them together
     val newDf: DataFrame = initDf.withColumn("id1", monotonically_increasing_id())
     val newPredictions = predictionsDf.withColumn("id2", monotonically_increasing_id())
 
+    // Join the original dataframe with the prediction
     val df2: DataFrame = newDf.as("df1").join(newPredictions.as("df2")
       , newDf("id1") === newPredictions("id2"),
       "inner")
@@ -130,14 +138,16 @@ object ClickPrediction extends App {
           , "df1.impid", "df1.interests", "df1.media", "df1.network", "df1.os"
           , "df1.publisher", "df1.size", "df1.timestamp", "df1.type", "df1.user", "df2.prediction")
 
-    // Export the result as CSV
+    // Transform the column size into a column of string to be able to write the dataframe into a csv file.
     val dfToExport: DataFrame = DataCleaner.castSize(df2)
+
+    // Export the result as CSV
     dfToExport.write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
   }
 
   //-------------------- MAIN ------------------------
-  //creationModel()
-  batch("", "/home/godefroi/Téléchargements/modelSaved")
+  creationModel()
+  //batch("", "/home/godefroi/Téléchargements/modelSaved")
   /*
   main()
 
