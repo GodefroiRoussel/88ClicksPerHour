@@ -1,12 +1,12 @@
-import clicks.ClickPrediction.{assembler, testData, trainData, _}
 import clicks.DataCleaner
 import org.apache.spark
-import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.ml.feature._
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 
 object test extends App {
     val spark = SparkSession
@@ -35,11 +35,18 @@ object test extends App {
         return newdf
     }
 
+    //val labelIndexer = new StringIndexer().setInputCol("label").setOutputCol("labelIndex")
     val appOrSiteIndexer = new StringIndexer().setInputCol("appOrSite").setOutputCol("appOrSiteIndex")
     val interestsIndexer = new StringIndexer().setInputCol("interests").setOutputCol("interestsIndex")
     val mediaIndexer = new StringIndexer().setInputCol("media").setOutputCol("mediaIndex")
     val publisherIndexer = new StringIndexer().setInputCol("publisher").setOutputCol("publisherIndex")
-    val userIndexer = new StringIndexer().setInputCol("user").setOutputCol("userIndex")
+
+    val appEncoder = new OneHotEncoder().setInputCol("appOrSiteIndex").setOutputCol("appOrSiteIndexEnc")
+    val interestsEncoder = new OneHotEncoder().setInputCol("interestsIndex").setOutputCol("interestsIndexEnc")
+    val mediaEncoder = new OneHotEncoder().setInputCol("mediaIndex").setOutputCol("mediaIndexEnc")
+    val publisherEncoder = new OneHotEncoder().setInputCol("publisherIndex").setOutputCol("publisherIndexEnc")
+
+    //val userIndexer = new StringIndexer().setInputCol("user").setOutputCol("userIndex")
 
    /* val appOrSiteIndexer: DataFrame = indexStringColumns(data, "appOrSite")
     val interestsIndexer: DataFrame = indexStringColumns(appOrSiteIndexer, "interests")
@@ -53,7 +60,7 @@ object test extends App {
 */
 
     val assembler: VectorAssembler = new VectorAssembler()
-        .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "userIndex"))
+        .setInputCols(Array("bidFloor", "appOrSiteIndexEnc", "interestsIndexEnc", "mediaIndexEnc", "publisherIndexEnc"))
         .setOutputCol("features")
 
     val testing = 0.2
@@ -64,37 +71,52 @@ object test extends App {
     val trainData : DataFrame = splits(0)
     val testData : DataFrame = splits(1)
 
+    trainData.printSchema()
+    trainData.show()
 
-    var train: DataFrame = assembler.transform(trainData)
+    testData.printSchema()
+    testData.show()
 
 
-    var test: DataFrame = assembler.transform(testData)
+    //var train: DataFrame = assembler.transform(trainData)
+
+
+    //var test: DataFrame = assembler.transform(testData)
 
 
     val lr: LogisticRegression = new LogisticRegression()
-        /*.setLabelCol("label")
-         .setFeaturesCol("features")
+        .setLabelCol("label")
+        .setFeaturesCol("features")
         .setPredictionCol("prediction")
         .setMaxIter(10)
-        .setRegParam(0.01)
-*/
-    val stages = Array(appOrSiteIndexer, interestsIndexer, mediaIndexer, publisherIndexer, userIndexer, assembler, lr)
+        .setRegParam(0.3)
+
+    println("Je passe bien après la lr")
+
+    val stages = Array(appOrSiteIndexer, interestsIndexer, mediaIndexer, publisherIndexer, appEncoder, interestsEncoder, mediaEncoder, publisherEncoder, assembler, lr)
 
     val pipeline = new Pipeline().setStages(stages)
 
-   val model = pipeline.fit(train)
+    println("On build le Pipeline ça va tout crash !!")
+
+   val model: PipelineModel = pipeline.fit(trainData)
+
+    println("Ah ben non au final ")
+
 
    //val model: LogisticRegressionModel = lr.fit(trainData)
    //println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
 
 
     // Test the model
-    val predictions: DataFrame = model.transform(test)
-    predictions.show
+    val predictions: DataFrame = model.transform(testData)
+    predictions.printSchema()
+    //predictions.show()
 
-    predictions.select ("label", "prediction","rawPrediction").show()
-    predictions.select("prediction").distinct().show()
-    predictions.select("label").distinct().show()
+    println("C'était ce putain de SHOW ?")
+    //predictions.select ("label", "prediction","rawPrediction").show()
+    //predictions.select("prediction").distinct().show()
+    //predictions.select("label").distinct().show()
     val evaluator = new BinaryClassificationEvaluator()
         .setMetricName("areaUnderROC")
         .setRawPredictionCol("rawPrediction")
