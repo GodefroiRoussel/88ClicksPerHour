@@ -3,8 +3,9 @@ package clicks
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.feature._
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions.udf
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
-import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.{Pipeline, PipelineModel}
 
 object ClickPrediction extends App {
   val spark = SparkSession
@@ -50,27 +51,52 @@ object ClickPrediction extends App {
   val publisherIndexer: DataFrame = indexStringColumns(mediaIndexer, "publisher")
   //val sizeIndexer: DataFrame = indexStringColumns(publisherIndexer, "size")
   val userIndexer: DataFrame = indexStringColumns(publisherIndexer, "user")*/
-  val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests", "media", "publisher", "user"))
+  val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user"))
 
   println("-----------------------------         USER INDEXER               ------------------------------------------------------")
   userIndexer.printSchema()
   userIndexer.show()
 
+  def balanceDataset(dataset: DataFrame): DataFrame = {
+
+    // Re-balancing (weighting) of records to be used in the logistic loss objective function
+    val numNegatives = dataset.filter(dataset("label") === 0).count
+    val datasetSize = dataset.count
+    val balancingRatio = (datasetSize - numNegatives).toDouble / datasetSize
+
+    val calculateWeights = udf { d: Double =>
+      if (d == 0.0) {
+        1 * balancingRatio
+      }
+      else {
+        (1 * (1.0 - balancingRatio))
+      }
+    }
+
+    val weightedDataset = dataset.withColumn("classWeightCol", calculateWeights(dataset("label")))
+    weightedDataset
+  }
+
+  val dfTest = balanceDataset(userIndexer)
 
   val assembler: VectorAssembler = new VectorAssembler()
-    .setInputCols(Array("bidFloor", "appOrSiteIndex", "interestsIndex", "mediaIndex", "publisherIndex", "userIndex"))
+    .setInputCols(Array("appOrSiteIndex", "interestsIndex","mediaIndex", "publisherIndex", "userIndex"))
     .setOutputCol("features")
 
   val testValue = 0.25
   val training = 0.75
-  val splits : Array[DataFrame] = userIndexer.randomSplit(Array(training, testValue))
+  val splits : Array[DataFrame] = dfTest.randomSplit(Array(training, testValue))
   var trainData : DataFrame = splits(0)
   var testData : DataFrame = splits(1)
 
-  var train: DataFrame = assembler.transform(trainData)
+  //var train: DataFrame = assembler.transform(trainData)
 
 
-  var test: DataFrame = assembler.transform(testData)
+
+
+
+
+  //var test: DataFrame = assembler.transform(testData)
 
 
   /*train = train.select("features", "label")
@@ -84,25 +110,36 @@ object ClickPrediction extends App {
   // Train the model
 
   val lr: LogisticRegression = new LogisticRegression()
+      .setWeightCol("classWeightCol")
     .setLabelCol("label")
     .setFeaturesCol("features")
-    .setRegParam(0.0)
-    .setElasticNetParam(0.0)
+    .setRegParam(0.8)
+    .setElasticNetParam(0.3)
     .setMaxIter(10)
-    .setTol(1E-6)
-    .setFitIntercept(true)
+     // .setThreshold(0.962)
+    /*.setTol(1E-6)
+    .setFitIntercept(true)*/
 
   val stages = Array(assembler,lr)
 
-  val pipeline = new Pipeline().setStages(stages)
+  val pipeline: Pipeline = new Pipeline().setStages(stages)
 
   //val model: LogisticRegressionModel = lr.fit(train)
-  val model = pipeline.fit(train)
+  val model: PipelineModel = pipeline.fit(trainData)
   //println(s"Coefficients: ${model.coefficients} Intercept: ${model.intercept}")
 
 
   // Test the model
-  val predictions: DataFrame = model.transform(test)
+  val predictions: DataFrame = model.transform(testData)
+  //predictions.select("bidFloor").distinct().show()
+  predictions.select("appOrSiteIndex").distinct().show()
+  predictions.select("interestsIndex").distinct().show()
+  predictions.select("mediaIndex").distinct().show()
+  predictions.select("publisherIndex").distinct().show()
+  predictions.select("userIndex").distinct().show()
+
+
+
   predictions.printSchema()
   predictions.show
   predictions.select ("label", "prediction","rawPrediction").show()
