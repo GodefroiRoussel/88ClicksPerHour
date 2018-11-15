@@ -146,11 +146,11 @@ object ClickPrediction extends App {
     val dfToExport: DataFrame = DataCleaner.castSize(df2)
 
     // Export the result as CSV
-    dfToExport.write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
+    dfToExport.write.format("csv").option("header", "true").save("./predictions/test.csv")
   }
 
   //-------------------- MAIN ------------------------
-  batch(filePath, "/Users/johan/Downloads/modelSaved")
+  batch(filePath, "./modelSaved")
   /*
   main()
 
@@ -214,23 +214,6 @@ object ClickPrediction extends App {
     // Creates the new classWeightCol with the weight of each label
     val weightedDataset = dataset.withColumn("classWeightCol", calculateWeights(dataset("label")))
     weightedDataset
-  }
-
-    /**
-    * allows the user to choose between two modes, one for create a classification model and one for predict the label variable
-    * 
-    */
-  def chooseMode(): String = {
-    println("Do you want to create a model or to predict some data from unlabelled data ?\n" +
-        "Press 1 to create a model.\n" +
-        "Press 2 to predict clicks from unlabelled data.\n" +
-        "Press any other key to quit the program.\n")
-
-    StdIn.readLine()
-  }
-
-  def end(): Unit = {
-
   }
 
 }
