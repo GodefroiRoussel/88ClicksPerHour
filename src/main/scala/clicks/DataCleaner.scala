@@ -40,12 +40,27 @@ object DataCleaner {
   }
 
 
-  def cleanSize(dataFrame: DataFrame):DataFrame ={
-      val columnNames = Seq("appOrSite", "bidFloor", "interests", "label", "media", "publisher", "user")
-
-      //val df1 : DataFrame = dataFrame.filter("size is not NULL")
-      dataFrame.select( columnNames.head, columnNames.tail: _*)
+  def castSize(dataFrame: DataFrame):DataFrame ={
+    dataFrame.withColumn("size", dataFrame("size").cast("string"))
   }
+
+  def cleanSize(dataFrame: DataFrame) : DataFrame ={
+    dataFrame.na.fill("UNKNOWN",Seq("size"))
+  }
+
+
+  def cleanType(dataFrame: DataFrame) : DataFrame ={
+    dataFrame.na.fill("UNKNOWN",Seq("type"))
+  }
+
+
+
+  def selectData(dataFrame: DataFrame):DataFrame ={
+    val columnNames = Seq("appOrSite", "bidFloor", "interests", "label", "media", "publisher", "user", "size", "type")
+
+    dataFrame.select( columnNames.head, columnNames.tail: _*)
+  }
+
 
   def cleanInterestsRegex(col: org.apache.spark.sql.Column): org.apache.spark.sql.Column = {
     regexp_replace(col, "-[0-9]", "")
@@ -69,8 +84,11 @@ object DataCleaner {
     ndf = label(ndf)
     ndf = cleanBidFloor(ndf)
     ndf = cleanNullInterests(ndf)
+    ndf = castSize(ndf)
+    ndf = cleanSize(ndf)
+    ndf = cleanType(ndf)
+    ndf = selectData(ndf)
     ndf = cleanInterests(ndf)
-      ndf = cleanSize(ndf)
     return ndf
   }
 

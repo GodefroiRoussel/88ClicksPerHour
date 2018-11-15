@@ -16,7 +16,7 @@ object ClickPrediction extends App {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-  val df = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
+  val df = spark.read.json("/Users/assilelyahyaoui/Documents/data-students.json")
 
   val data = DataCleaner.newDf(df)
 
@@ -35,7 +35,7 @@ object ClickPrediction extends App {
     return newdf
   }
 
-  val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user"))
+  val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user", "size", "type"))
 
   println("-----------------------------         USER INDEXER               ------------------------------------------------------")
   userIndexer.printSchema()
@@ -64,7 +64,7 @@ object ClickPrediction extends App {
   val dfTest = balanceDataset(userIndexer)
 
   val assembler: VectorAssembler = new VectorAssembler()
-    .setInputCols(Array("appOrSiteIndex", "interestsIndex","mediaIndex", "publisherIndex", "userIndex"))
+    .setInputCols(Array("appOrSiteIndex", "interestsIndex","mediaIndex", "publisherIndex", "userIndex", "sizeIndex", "typeIndex"))
     .setOutputCol("features")
 
   val testValue = 0.2
@@ -111,7 +111,6 @@ object ClickPrediction extends App {
   predictions.show()
   predictions.select ("label", "prediction","rawPrediction").show()*/
   predictions.select("prediction").distinct().show()
-  predictions.select("label").distinct().show()
 
   val evaluator = new BinaryClassificationEvaluator()
     .setMetricName("areaUnderROC")
