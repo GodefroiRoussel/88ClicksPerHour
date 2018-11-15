@@ -8,7 +8,7 @@ import org.apache.spark.ml.feature._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 
-object test extends App {
+object test2 extends App {
     val spark = SparkSession
         .builder()
         .appName("Click prediction")
