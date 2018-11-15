@@ -27,7 +27,8 @@ object DataCleaner {
     * @param dataFrame DataFrame to change
     */
   def label(dataFrame: DataFrame): DataFrame = {
-    dataFrame.withColumn("label", booleanToInt_column(dataFrame("label")))
+    //dataFrame.withColumn("label", booleanToInt_column(dataFrame("label")))
+    dataFrame.withColumn("label",dataFrame("label").cast("Int"))
   }
 
   def cleanBidFloor(dataFrame: DataFrame) : DataFrame ={
