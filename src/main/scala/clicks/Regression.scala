@@ -16,7 +16,7 @@ object ClickPrediction extends App {
 
     println("Please enter the path to your JSON file you want to predict")
     val filePath: String = readLine().trim()
-    clickPrediction(filePath, "./modelSaved")
+    clickPrediction(filePath, "./model")
 
 
 
@@ -82,7 +82,7 @@ object ClickPrediction extends App {
     val model: PipelineModel = pipeline.fit(trainData)
 
     // Saving model to the path and overwrite the file if already existing
-    model.write.overwrite().save("./modelSaved")
+    model.write.overwrite().save("./model")
 
     // We test the model
     val predictions: DataFrame = model.transform(testData)
