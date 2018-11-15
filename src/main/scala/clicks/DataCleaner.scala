@@ -8,7 +8,9 @@ import org.apache.spark.sql.Column
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{concat, lit}
 
+// Cleans the DataFrame according to our choices
 object DataCleaner {
+
   val spark = SparkSession
     .builder()
     .appName("Click prediction")
@@ -16,43 +18,84 @@ object DataCleaner {
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 
-  //val data = spark.read.json("/home/godefroi/Téléchargementsdata-students.json")
-
-  def booleanToInt( bool :Boolean) = if(bool) 1.0 else 0.0
-  val booleanToInt_column = udf(booleanToInt _)
-
   /**
-    * transform label attribute to int
+    * transform the label attribute to int
     *
     * @param dataFrame DataFrame to change
     */
   def label(dataFrame: DataFrame): DataFrame = {
-    //dataFrame.withColumn("label", booleanToInt_column(dataFrame("label")))
     dataFrame.withColumn("label",dataFrame("label").cast("Int"))
   }
 
+  /**
+    * replace the null columns of bidFloor with 0
+    *
+    * @param dataFrame DataFrame to change
+    */
   def cleanBidFloor(dataFrame: DataFrame) : DataFrame ={
     dataFrame.na.fill(0,Seq("bidFloor"))
   }
 
+  /**
+    * replace the null columns of interests with "N/A" for not applicable
+    *
+    * @param dataFrame DataFrame to change
+    */
   def cleanNullInterests(dataFrame: DataFrame) : DataFrame ={
-    dataFrame.na.fill("NC",Seq("interests"))
+    dataFrame.na.fill("N/A",Seq("interests"))
   }
 
-
+  /**
+    * transform the size attribute to string
+    *
+    * @param dataFrame DataFrame to change
+    */
   def castSize(dataFrame: DataFrame):DataFrame ={
     dataFrame.withColumn("size", dataFrame("size").cast("string"))
   }
 
+  /**
+    * replace the null columns of size with "UNKNOWN" 
+    *
+    * @param dataFrame DataFrame to change
+    */
   def cleanSize(dataFrame: DataFrame) : DataFrame ={
     dataFrame.na.fill("UNKNOWN",Seq("size"))
   }
 
-
+  /**
+    * replace the null columns of type with "UNKNOWN" 
+    *
+    * @param dataFrame DataFrame to change
+    */
   def cleanType(dataFrame: DataFrame) : DataFrame ={
     dataFrame.na.fill("UNKNOWN",Seq("type"))
   }
 
+  /**
+    * applies a regex expression to the column
+    *
+    * @param col Column to change
+    */
+  def cleanInterestsRegex(col: org.apache.spark.sql.Column): org.apache.spark.sql.Column = {
+    regexp_replace(col, "-[0-9]", "")
+  }
+
+  /**
+    * uses the cleanInterestsRegex to replace the interests columns to remove the sub interests
+    *
+    * @param dataFrame DataFrame to change
+    */
+  def cleanInterests(dataFrame: DataFrame) : DataFrame={
+    dataFrame.withColumn("interests", cleanInterestsRegex(dataFrame("interests")))
+  }
+
+  /**
+    * select only the columns of the dataFrame that we want to keep
+    *
+    * @param dataFrame DataFrame to change
+    * @param forPrediction boolean, equals true if we use it for the prediction program, false otherwise
+    */
   def selectData(dataFrame: DataFrame, forPrediction: Boolean): DataFrame = {
     val columnNames = forPrediction match {
       case true => Seq("appOrSite", "bidFloor", "interests", "media", "publisher", "user", "size", "type")
@@ -60,27 +103,13 @@ object DataCleaner {
     }
     dataFrame.select( columnNames.head, columnNames.tail: _*)
   }
-
-
-  def cleanInterestsRegex(col: org.apache.spark.sql.Column): org.apache.spark.sql.Column = {
-    regexp_replace(col, "-[0-9]", "")
-  }
-
-
-  def cleanInterests(dataFrame: DataFrame) : DataFrame={
-    dataFrame.withColumn("interests", cleanInterestsRegex(dataFrame("interests")))
-  }
-
-  def sizeToString(dataFrame: DataFrame): DataFrame={
-      val colSize: Column = dataFrame("size")
-      val test : String = colSize.toString()
-      println(test)
-   // dataFrame.withColumn("size", test)
-     // dataFrame.withColumn("size", concat("x", "size"))
-    //dataFrame.withColumn("size", colSize.)
-      dataFrame
-  }
-
+  
+    /**
+    * applies all the functions to the dataFrame
+    *
+    * @param dataFrame DataFrame to change
+    * @param forPrediction boolean, equals true if we use it for the prediction program, false otherwise
+    */
   def newDf(dataFrame: DataFrame, forPrediction: Boolean): DataFrame ={
     var ndf = dataFrame
     if (!forPrediction)
@@ -96,8 +125,4 @@ object DataCleaner {
     ndf = sizeToString(ndf)
     return ndf
   }
-
-  //sizeToString.coalesce(1).write.json("/Users/assilelyahyaoui/Documents/data-students-cleaned.json")
-  // cleanSize.coalesce(1).write.json("/Users/johan/Downloads/data-students-new1.json")
-
 }
