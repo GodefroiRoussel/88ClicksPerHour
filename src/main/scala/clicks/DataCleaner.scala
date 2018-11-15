@@ -53,11 +53,11 @@ object DataCleaner {
     dataFrame.na.fill("UNKNOWN",Seq("type"))
   }
 
-
-
-  def selectData(dataFrame: DataFrame):DataFrame ={
-    val columnNames = Seq("appOrSite", "bidFloor", "interests", "label", "media", "publisher", "user", "size", "type")
-
+  def selectData(dataFrame: DataFrame, forPrediction: Boolean): DataFrame = {
+    val columnNames = forPrediction match {
+      case true => Seq("appOrSite", "bidFloor", "interests", "media", "publisher", "user", "size", "type")
+      case _ => Seq("appOrSite", "bidFloor", "interests", "label", "media", "publisher", "user", "size", "type")
+    }
     dataFrame.select( columnNames.head, columnNames.tail: _*)
   }
 
@@ -75,20 +75,25 @@ object DataCleaner {
       val colSize: Column = dataFrame("size")
       val test : String = colSize.toString()
       println(test)
-    //dataFrame.withColumn("size", concat("x", "size"))
+   // dataFrame.withColumn("size", test)
+     // dataFrame.withColumn("size", concat("x", "size"))
+    //dataFrame.withColumn("size", colSize.)
       dataFrame
   }
 
-  def newDf(dataFrame: DataFrame): DataFrame ={
+  def newDf(dataFrame: DataFrame, forPrediction: Boolean): DataFrame ={
     var ndf = dataFrame
-    ndf = label(ndf)
+    if (!forPrediction)
+      ndf = label(ndf)
+
     ndf = cleanBidFloor(ndf)
     ndf = cleanNullInterests(ndf)
     ndf = castSize(ndf)
     ndf = cleanSize(ndf)
     ndf = cleanType(ndf)
-    ndf = selectData(ndf)
+    ndf = selectData(ndf, forPrediction)
     ndf = cleanInterests(ndf)
+    ndf = sizeToString(ndf)
     return ndf
   }
 
