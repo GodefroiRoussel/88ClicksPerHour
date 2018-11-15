@@ -122,7 +122,6 @@ object DataCleaner {
     ndf = cleanType(ndf)
     ndf = selectData(ndf, forPrediction)
     ndf = cleanInterests(ndf)
-    ndf = sizeToString(ndf)
     return ndf
   }
 }

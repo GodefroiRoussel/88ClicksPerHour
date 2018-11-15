@@ -6,6 +6,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineModel}
+import org.apache.spark.sql.functions._
 
 object ClickPrediction extends App {
 
@@ -32,7 +33,7 @@ object ClickPrediction extends App {
     val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "user", "size", "type"))
 
     // We create a dataSet with a new colum classWeightCol that contains the weight of the labels 
-    val dfTest = balanceDataset(userIndexer)
+    val dfBalanced = balanceDataset(userIndexer)
 
     // Transform the list of indexed columns into a single vector column.
     val assembler: VectorAssembler = new VectorAssembler()
@@ -42,7 +43,7 @@ object ClickPrediction extends App {
     // We split our new dataset in two, one dataSet to train our model and one to test it
     val testValue = 0.2
     val training = 0.8
-    val splits: Array[DataFrame] = dfTest.randomSplit(Array(training, testValue))
+    val splits: Array[DataFrame] = dfBalanced.randomSplit(Array(training, testValue))
     var trainData: DataFrame = splits(0)
     var testData: DataFrame = splits(1)
 
@@ -66,6 +67,9 @@ object ClickPrediction extends App {
     // We train the model
     val model: PipelineModel = pipeline.fit(trainData)
 
+    // Saving model to the path and overwrite the file if already existing
+    model.write.overwrite().save("./modelSaved")
+
     // We test the model
     val predictions: DataFrame = model.transform(testData)
 
@@ -75,10 +79,6 @@ object ClickPrediction extends App {
 
     // Print the coefficients and intercept from our logistic regression
     println(s"Weights: ${lorModel.coefficients} Intercept: ${lorModel.intercept}")
-
-    //predictions.select ("label", "prediction","rawPrediction").show()*/
-    //predictions.select("prediction").distinct().show()
-
 
     // We use an Evaluator to compute metrics that indicate how good our model is
     //BinaryClassificationEvaluator is use for binary classifications like our LogisticRegression
@@ -108,24 +108,38 @@ object ClickPrediction extends App {
         .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
-    val input = StdIn.readLine()
+    val initDf: DataFrame = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
 
-    val df = spark.read.json(filePath)
+    val data: DataFrame = DataCleaner.newDf(initDf, true)
 
-    val data = DataCleaner.newDf(df, true)
+    val model: PipelineModel = PipelineModel.load(modelPath)
 
-    val model = PipelineModel.load(modelPath)
+    val userIndexer: DataFrame= indexStringColumns2(data, Array("appOrSite", "interests","media", "publisher", "size", "type", "user"))
 
-    println("J'ai bien chargé le model")
+    val predictions: DataFrame = model.transform(userIndexer)
+
+    var predictionsDf: DataFrame = predictions.select("prediction")
+
+    val newDf: DataFrame = initDf.withColumn("id1", monotonically_increasing_id())
+    val newPredictions = predictionsDf.withColumn("id2", monotonically_increasing_id())
+
+    val df2: DataFrame = newDf.as("df1").join(newPredictions.as("df2")
+      , newDf("id1") === newPredictions("id2"),
+      "inner")
+        .select("df1.appOrSite", "df1.bidFloor", "df1.city", "df1.exchange"
+          , "df1.impid", "df1.interests", "df1.media", "df1.network", "df1.os"
+          , "df1.publisher", "df1.size", "df1.timestamp", "df1.type", "df1.user", "df2.prediction")
 
     // Export the result as CSV
-    model.transform(data).select("label", "prediction").write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
-
+    val dfToExport: DataFrame = DataCleaner.castSize(df2)
+    dfToExport.write.format("csv").option("header", "true").save("/home/godefroi/Téléchargements/test.csv")
   }
 
   //-------------------- MAIN ------------------------
-  creationModel()
-  /*main()
+  //creationModel()
+  batch("", "/home/godefroi/Téléchargements/modelSaved")
+  /*
+  main()
 
   def main(): Unit ={
     val mode: String = chooseMode()
