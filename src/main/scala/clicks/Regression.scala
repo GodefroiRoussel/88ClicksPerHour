@@ -9,7 +9,10 @@ import org.apache.spark.ml.{Pipeline, PipelineModel}
 
 object ClickPrediction extends App {
 
-    // Allows to create the classification model
+    /**
+    * allows to create the classification model
+    *
+    */
   def creationModel(): Unit = {
 
     val spark = SparkSession
@@ -91,7 +94,12 @@ object ClickPrediction extends App {
     spark.close()
   }
 
-
+    /**
+    * applies our model to a file and predicts the number of clicks
+    * 
+    * @param filePath path to the Json with the data
+    * @param modelPath path to our model
+    */
   def batch(filePath: String, modelPath: String): Unit = {
     val spark = SparkSession
         .builder()
@@ -131,7 +139,12 @@ object ClickPrediction extends App {
 
   // ------------------------- FUNCTIONS --------------------------
 
-    // Takes each colum of the dataFrame and indexed it
+    /**
+    * creates a new dataFrame from the current dataFrame to index each columns specified in cols
+    * 
+    * @param df dataFrame to use
+    * @param cols columns that we want to index
+    */
   def indexStringColumns2(df: DataFrame, cols: Array[String]): DataFrame = {
     var newdf = df
 
@@ -145,8 +158,11 @@ object ClickPrediction extends App {
     }
     return newdf
   }
-
-    // Function that takes a DataFrame and add a new columns that contains the labels's weight
+    /**
+    * takes a DataFrame and add a new column that contains the labels's weight
+    * 
+    * @param dataset dataFrame to change
+    */
   def balanceDataset(dataset: DataFrame): DataFrame = {
 
     // Count the number of labels that equal 0
@@ -173,7 +189,10 @@ object ClickPrediction extends App {
     weightedDataset
   }
 
-    // Allows the user to choose between two modes, one for create a classification model and one for predict the label variable
+    /**
+    * allows the user to choose between two modes, one for create a classification model and one for predict the label variable
+    * 
+    */
   def chooseMode(): String = {
     println("Do you want to create a model or to predict some data from unlabelled data ?\n" +
         "Press 1 to create a model.\n" +
