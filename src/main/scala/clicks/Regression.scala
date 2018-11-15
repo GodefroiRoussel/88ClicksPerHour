@@ -7,8 +7,12 @@ import org.apache.spark.sql.functions.udf
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.functions._
+import scala.io.StdIn.readLine
 
 object ClickPrediction extends App {
+
+    println("Please enter the path to your file")
+    val filePath = readLine().trim()
 
     /**
     * allows to create the classification model
@@ -109,7 +113,7 @@ object ClickPrediction extends App {
         .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
-    val initDf: DataFrame = spark.read.json("/home/godefroi/Téléchargements/data-students.json")
+    val initDf: DataFrame = spark.read.json(filePath)
 
     // We clean the dataFrame with our dataCleaner program
     val data: DataFrame = DataCleaner.newDf(initDf, true)
@@ -146,8 +150,7 @@ object ClickPrediction extends App {
   }
 
   //-------------------- MAIN ------------------------
-  creationModel()
-  //batch("", "/home/godefroi/Téléchargements/modelSaved")
+  batch(filePath, "/Users/johan/Downloads/modelSaved")
   /*
   main()
 
